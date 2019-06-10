@@ -49,35 +49,46 @@ namespace Client
             thread.Start(client);
 
             string s;
-            while (!string.IsNullOrEmpty((s = Console.ReadLine())))
+            if (!string.IsNullOrEmpty((s = Console.ReadLine())))
             {
                 //byte[] buffer = Encoding.ASCII.GetBytes(s);
                 //ns.Write(buffer, 0, buffer.Length); 
-
+                //Console.WriteLine("Enter if");
                 int id = int.Parse(s);
-
-
-
+                //Console.WriteLine("Enter " + id);
+                //byte[] receivedBytes = new byte[1024];
+                //int byte_count = ns.Read(receivedBytes, 0, receivedBytes.Length);
+                
                 List<byte> sendByte = new List<byte>();
-                sendByte.Add(0xff);
-                sendByte.Add(0x04);
+
+                sendByte.Add(0x05);
+                sendByte.Add(0x05);
                 sendByte.Add((byte)id);
+                sendByte.Add(0x01);
+                sendByte.Add(0x01);
+                sendByte.Add(0x01);  // id = 1
+                sendByte.Add(0x02);
+                sendByte.Add(0x02);
+                sendByte.Add(0x01);  // status = 1
+                sendByte.Add(0x00);
+                sendByte.Add(0x01);
 
 
-                string status = "Datetime:2019-06-06 23:59:59|SensorId:1|Status:1";
+                //string status = "Datetime:2019-06-06 23:59:59|SensorId:1|Status:1";
 
-                byte[] data = Encoding.ASCII.GetBytes(status);
+                //byte[] data = Encoding.ASCII.GetBytes(status);
 
-                for(int i=0;i<data.Length;i++)
-                {
-                    sendByte.Add(data[i]);
-                }
+                //for(int i=0;i<data.Length;i++)
+                //{
+                //    sendByte.Add(data[i]);
+                //}
 
                 ns.Write(sendByte.ToArray(), 0, sendByte.Count);
+                Console.WriteLine(BitConverter.ToString(sendByte.ToArray(), 0, sendByte.Count));
 
             }
-            
-            client.Client.Shutdown(SocketShutdown.Send);
+
+            //client.Client.Shutdown(SocketShutdown.Send);
             thread.Join();
             ns.Close();
             client.Close();
@@ -89,28 +100,49 @@ namespace Client
         {
             NetworkStream ns = client.GetStream();
             byte[] receivedBytes = new byte[1024];
-            int byte_count;
+            int byte_count = ns.Read(receivedBytes, 0, receivedBytes.Length);
 
-            List<byte> bytelist = new List<byte>();
-            byte_count = ns.Read(receivedBytes, 0, receivedBytes.Length);
-            while ((byte_count = ns.Read(receivedBytes, 0, receivedBytes.Length)) > 0)
+
+            //verify
+            if (byte_count >= 11)
             {
-                //string data = Encoding.ASCII.GetString(receivedBytes, 0, byte_count);
-                //Console.Write(Encoding.ASCII.GetString(receivedBytes, 0, byte_count));
+                if (receivedBytes[0] == 0x05 && receivedBytes[1] == 0x05)  //check header
+                {
+                    if (receivedBytes[9] == 0x00 && receivedBytes[10] == 0x01)
+                    {
+                        string server = BitConverter.ToString(receivedBytes, 2, 1);
+                        Console.WriteLine(server);
+                        if (receivedBytes[3] == 0x01 && receivedBytes[4] == 0x01)
+                        {
+                            string id = BitConverter.ToString(receivedBytes, 5, 1);
+                            Console.WriteLine("id = " + id);
+                        }
+                        if (receivedBytes[6] == 0x02 && receivedBytes[7] == 0x02)
+                        {
+                            string status = BitConverter.ToString(receivedBytes, 8, 1);
+                            Console.WriteLine("status = " + status);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Wrong data");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Wrong end");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("wrong header");
+                }
             }
-            string data = Encoding.ASCII.GetString(receivedBytes, 0, byte_count);
-            byte[] _buffer = Encoding.ASCII.GetBytes(data);
-            string d_id = BitConverter.ToString(_buffer, 0);
-            Console.WriteLine("printing!!!!" + d_id);
-            //string room = BitConverter.ToString(_buffer, 1, 7);
-            //string status = BitConverter.ToString(_buffer, 8);
+            else
+            {
+                Console.WriteLine("unknow package");
+            }
+            // Console.Write(Encoding.ASCII.GetString(receivedBytes, 0, byte_count));
 
-            //bytelist.AddRange(Encoding.ASCII.GetBytes(d_id));
-            //bytelist.AddRange(Encoding.ASCII.GetBytes(room));
-            //bytelist.AddRange(Encoding.ASCII.GetBytes(status));
-            //bytelist.ToArray();
-
-            //Console.WriteLine("printing!!!!" + bytelist);
         }
     }
 }
