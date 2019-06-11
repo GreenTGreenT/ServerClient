@@ -49,51 +49,50 @@ namespace Server_Tutorial
                                     Monitor.Enter(all_session);  // wait
 
                                     try
-                                    {
-
-                                        //int j = all_session.Count;
-                                        if (j == 0)
+                                    {                                        
+                                        if (all_session.Count == 0)
                                         {
                                             new_session._socket = client;
                                             new_session.id = BitConverter.ToString(receivedBytes, 2, 1);
                                             all_session.Add(new_session);
-                                            j += 1;
-                                        }                                        
-                                        //j = all_session.Count;
+                                            j = j + 1;
+                       
+                                        }
+                                        //int j = all_session.Count;
                                         for (int i = 0; i < j; i++)
                                         {
-                                            if (all_session[i].id == id_client)
+                                            if (all_session[i].id == id_client)  //it use to be in
                                             {
                                                 ThreadPool.UnsafeQueueUserWorkItem(new WaitCallback(SendData), i);
                                                 //t.Start();
                                             }
-                                            else
-                                            {
-                                                continue;
-                                            }
+                                            //else
+                                            //{
+                                            //    continue;
+                                            //}
 
-                                            if (i > 1 && i == j - 1)
+                                            if (i == j - 1) // Loop until the last one of all_session
                                             {
-                                                if (all_session[i].id != id_client)
+                                                if (all_session[i].id != id_client) //If it's new one
                                                 {
                                                     new_session._socket = client;
                                                     new_session.id = BitConverter.ToString(receivedBytes, 2, 1);
                                                     all_session.Add(new_session);
-                                                    j += 1;
+                                                    j = j + 1;
                                                     //Thread t = new Thread(() => SendData(i));
                                                     //t.Start();
-                                                    ThreadPool.UnsafeQueueUserWorkItem(new WaitCallback(SendData), i);
+                                                    //ThreadPool.UnsafeQueueUserWorkItem(new WaitCallback(SendData), i);
                                                 }
                                                 else
-                                                {
-                                                    ThreadPool.UnsafeQueueUserWorkItem(new WaitCallback(SendData), i);
+                                                {                                                  
                                                     //Thread t = new Thread(() => SendData(i));
                                                     //t.Start();
+                                                    continue;                                                    
                                                 }
                                             }
                                             else
                                             {
-                                                break;
+                                                continue;
                                             }
                                         }
                                     }
@@ -194,7 +193,7 @@ namespace Server_Tutorial
             //TcpClient client = new TcpClient();
             NetworkStream _stream = all_session[k]._socket.GetStream();
             
-
+            
             //byte[] data1 = Encoding.ASCII.GetBytes("5");
             sendByte.Add(0x05);
             sendByte.Add(0x05);
