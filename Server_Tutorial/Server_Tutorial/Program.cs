@@ -12,6 +12,7 @@ namespace Server_Tutorial
     class Program
     {
         public static List<Session> all_session = new List<Session>();
+        
         //static readonly Dictionary<string, TcpClient> list_clients = new Dictionary<string, TcpClient>();
         public static List<byte> sendByte = new List<byte>();
         public static int j = 0;
@@ -22,79 +23,65 @@ namespace Server_Tutorial
                 TcpListener ServerSocket = new TcpListener(IPAddress.Any, 5000);
                 ServerSocket.Start();
 
-                Session new_session = new Session();
+                Array testdata = new Array[20];
                 
                 while (true)
                 {
-               
+                    Console.WriteLine("Number of session " + j);
                     TcpClient client = ServerSocket.AcceptTcpClient();
                     
                     NetworkStream ns = client.GetStream();
                     
                     byte[] receivedBytes = new byte[1024];
-                    int byte_count = ns.Read(receivedBytes, 0, receivedBytes.Length);
-                    //Console.WriteLine("This is byte_count " + byte_count);
-                 
-                    if (client.ReceiveBufferSize > 0)
-                    {
+
+                    while (ns.Read(receivedBytes, 0, receivedBytes.Length) > 0)
+                    { 
+
+                        //Console.WriteLine("This is byte_count " + byte_count);
+
+                        int byte_count = receivedBytes[2]; 
+
                         //verify
                         if (byte_count >= 11)
                         {
                             if (receivedBytes[0] == 0x05 && receivedBytes[1] == 0x05)  //check header
                             {
-                                if (receivedBytes[9] == 0x00 && receivedBytes[10] == 0x01)
+                                if (receivedBytes[byte_count-2] == 0x00 && receivedBytes[byte_count-1] == 0x01) // check end
                                 {
-                                    string id_client = BitConverter.ToString(receivedBytes, 2, 1);
+                                    string id_client = BitConverter.ToString(receivedBytes, 3, 1);
 
                                     Monitor.Enter(all_session);  // wait
 
                                     try
-                                    {                                        
-                                        if (all_session.Count == 0)
-                                        {
-                                            new_session._socket = client;
-                                            new_session.id = BitConverter.ToString(receivedBytes, 2, 1);
-                                            all_session.Add(new_session);
-                                            j = j + 1;
-                       
-                                        }
-                                        //int j = all_session.Count;
-                                        for (int i = 0; i < j; i++)
-                                        {
-                                            if (all_session[i].id == id_client)  //it use to be in
-                                            {
-                                                ThreadPool.UnsafeQueueUserWorkItem(new WaitCallback(SendData), i);
-                                                //t.Start();
-                                            }
-                                            //else
-                                            //{
-                                            //    continue;
-                                            //}
+                                    {
+                                        string Id = BitConverter.ToString(receivedBytes, 3, 1);
 
-                                            if (i == j - 1) // Loop until the last one of all_session
+                                        bool found = false;
+                                        foreach (Session _session in all_session)
+                                        {
+                                            if (_session.id == Id)
                                             {
-                                                if (all_session[i].id != id_client) //If it's new one
-                                                {
-                                                    new_session._socket = client;
-                                                    new_session.id = BitConverter.ToString(receivedBytes, 2, 1);
-                                                    all_session.Add(new_session);
-                                                    j = j + 1;
-                                                    //Thread t = new Thread(() => SendData(i));
-                                                    //t.Start();
-                                                    //ThreadPool.UnsafeQueueUserWorkItem(new WaitCallback(SendData), i);
-                                                }
-                                                else
-                                                {                                                  
-                                                    //Thread t = new Thread(() => SendData(i));
-                                                    //t.Start();
-                                                    continue;                                                    
-                                                }
-                                            }
-                                            else
-                                            {
-                                                continue;
+                                                found = true;
+
+                                                //_session._socket = client;
+                                                Thread t = new Thread(() => SendData(Id));
+                                                t.Start();
+
+                                                break;
                                             }
                                         }
+
+                                        if (!found)
+                                        {
+                                            Session new_session = new Session();
+                                            new_session._socket = client;
+                                            new_session.id = BitConverter.ToString(receivedBytes, 3, 1);
+                                            all_session.Add(new_session);
+                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Console.WriteLine(e);
                                     }
                                     finally
                                     {
@@ -103,20 +90,7 @@ namespace Server_Tutorial
 
                                     Monitor.Exit(all_session);  //until exit
 
-                                    if (receivedBytes[3] == 0x01 && receivedBytes[4] == 0x01)
-                                    {
-                                        string id = BitConverter.ToString(receivedBytes, 5, 1);
-                                        Console.WriteLine("id = " + id);
-                                    }
-                                    if (receivedBytes[6] == 0x02 && receivedBytes[7] == 0x02)
-                                    {
-                                        string status = BitConverter.ToString(receivedBytes, 8, 1);
-                                        Console.WriteLine("status = " + status);
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("Wrong data");
-                                    }
+                                        
                                 }
                                 else
                                 {
@@ -132,48 +106,51 @@ namespace Server_Tutorial
                         {
                             Console.WriteLine("unknow package");
                         }
-                        //}
 
-                        //if (all_session.Count == 1)
-                        //{
-                        //    Thread t = new Thread(() => SendData(0));
-                        //    t.Start();
-                        //}
-                        //Console.WriteLine("TTTTTTTT" + all_session.Count);
-                        //if (all_session.Count > 1)
-                        //{
-                        //    Console.WriteLine("Enter >0");
-                        //    string id_client = BitConverter.ToString(receivedBytes, 2, 1);
 
-                        //    Console.WriteLine("To see ID " + id_client);
-                        //    int j = all_session.Count;
-                        //    Console.WriteLine("To see j  " + j);
-                        //    for (int i = 0; i < j; i++)
-                        //    {
-                        //        //Console.WriteLine("To see i  " + i);
-                        //        Console.WriteLine("To see what is out when put i  " + all_session[i].id);
-                        //        if (all_session[i].id == id_client)
-                        //        {
-                        //            Console.WriteLine("To see i  " + i);
-                        //            Console.WriteLine("Enter find id");
-                        //            Console.WriteLine("Enter exist ID");
-                        //            //Thread t = new Thread(() => SendData(i));
-                        //            Thread t = new Thread(() => SendData(i));
-                        //            t.Start();
-                        //        }
-                        //        else
-                        //        {
-                        //            Console.WriteLine("Enter else ");
-                        //            new_session._socket = client;
-                        //            new_session.id = BitConverter.ToString(receivedBytes, 2, 1);
-                        //            all_session.Add(new_session);
+                            //}
 
-                        //            Thread t = new Thread(() => SendData(i));
-                        //            t.Start();
-                        //        }
-                        //    }
-                        //    //Console.WriteLine("ALL " + all_session);
-                        //}
+                            //if (all_session.Count == 1)
+                            //{
+                            //    Thread t = new Thread(() => SendData(0));
+                            //    t.Start();
+                            //}
+                            //Console.WriteLine("TTTTTTTT" + all_session.Count);
+                            //if (all_session.Count > 1)
+                            //{
+                            //    Console.WriteLine("Enter >0");
+                            //    string id_client = BitConverter.ToString(receivedBytes, 2, 1);
+
+                            //    Console.WriteLine("To see ID " + id_client);
+                            //    int j = all_session.Count;
+                            //    Console.WriteLine("To see j  " + j);
+                            //    for (int i = 0; i < j; i++)
+                            //    {
+                            //        //Console.WriteLine("To see i  " + i);
+                            //        Console.WriteLine("To see what is out when put i  " + all_session[i].id);
+                            //        if (all_session[i].id == id_client)
+                            //        {
+                            //            Console.WriteLine("To see i  " + i);
+                            //            Console.WriteLine("Enter find id");
+                            //            Console.WriteLine("Enter exist ID");
+                            //            //Thread t = new Thread(() => SendData(i));
+                            //            Thread t = new Thread(() => SendData(i));
+                            //            t.Start();
+                            //        }
+                            //        else
+                            //        {
+                            //            Console.WriteLine("Enter else ");
+                            //            new_session._socket = client;
+                            //            new_session.id = BitConverter.ToString(receivedBytes, 2, 1);
+                            //            all_session.Add(new_session);
+
+                            //            Thread t = new Thread(() => SendData(i));
+                            //            t.Start();
+                            //        }
+                            //    }
+                            //    //Console.WriteLine("ALL " + all_session);
+                            //}
+                        
                     }
                 }
             }
@@ -186,28 +163,41 @@ namespace Server_Tutorial
 
         public static void SendData(object b)
         {
-            int k = (int)b;
-            //k = k - 1;
-            Console.WriteLine("Enter SendData");
-            Console.WriteLine("To see K " + k);
-            //TcpClient client = new TcpClient();
-            NetworkStream _stream = all_session[k]._socket.GetStream();
-            
-            
-            //byte[] data1 = Encoding.ASCII.GetBytes("5");
-            sendByte.Add(0x05);
-            sendByte.Add(0x05);
-            sendByte.Add(0xff);
-            sendByte.Add(0x01);
-            sendByte.Add(0x01);
-            sendByte.Add(0x01);  // id = 1
-            sendByte.Add(0x02);
-            sendByte.Add(0x02);
-            sendByte.Add(0x01);  // status = 1
-            sendByte.Add(0x00);
-            sendByte.Add(0x01);
-            _stream.Write(sendByte.ToArray(), 0, sendByte.Count);
-            
+            string id = (string)b;
+            Session cmdSession = new Session();
+            bool found = false;
+            foreach(Session _session in all_session)
+            {
+                if(_session.id == id)
+                {
+                    found = true;
+                    cmdSession = _session;
+                    break;
+                }
+            }
+
+            if (found)
+            {               
+                Console.WriteLine("Enter SendData");
+                Console.WriteLine("To see " + cmdSession.id);
+                NetworkStream _stream = cmdSession._socket.GetStream();
+                //var ID = Encoding.UTF8.GetBytes(id);
+
+                sendByte.Add(0x05);
+                sendByte.Add(0x05);
+                sendByte.Add(0x0A);
+                //sendByte.Add(ID);
+                sendByte.Add(0xff);
+                sendByte.Add(0xff);
+                sendByte.Add(0xff); 
+                sendByte.Add(0xff);
+                sendByte.Add(0xff);
+                sendByte.Add(0xff);  // status = 1
+                sendByte.Add(0x00);
+                sendByte.Add(0x01);
+                _stream.Write(sendByte.ToArray(), 0, sendByte.Count);
+
+            }
             
         }
 
