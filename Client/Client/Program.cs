@@ -21,12 +21,11 @@ namespace Client
             client.Connect(ip, port);
             Console.WriteLine("client connected!!");
             NetworkStream ns = client.GetStream();
-            Thread thread = new Thread(o => ReceiveData((TcpClient)o));
 
+            Thread thread = new Thread(o => ReceiveData((TcpClient)o)); // create tread that run fuction ReceiveData
             thread.Start(client);
 
             byte[] receivedBytes = new byte[1024];
-
             
             Console.WriteLine("enter id : ");
 
@@ -59,6 +58,7 @@ namespace Client
 
             bool running = true;
 
+            //Send data to server after register
             while(running)
             {               
                 if (!string.IsNullOrEmpty((s = Console.ReadLine())))
@@ -98,36 +98,21 @@ namespace Client
                         sendByte.Add(0x01);
 
                         ns.Write(sendByte.ToArray(), 0, sendByte.Count);
-                        Console.WriteLine(BitConverter.ToString(sendByte.ToArray(), 0, sendByte.Count));
-                        //Thread thread = new Thread(o => ReceiveData((TcpClient)o));
-
-                        //thread.Start(client);
+                        Console.WriteLine(BitConverter.ToString(sendByte.ToArray(), 0, sendByte.Count));                        
                     }
-                }
-                //if (ns.Read(receivedBytes, 0, receivedBytes.Length) > 0)
-                //{                    
-                //    Thread thread = new Thread(() => ReceiveData(client));
-                //    thread.Start();
-                //    thread.Join();
-                //}
-            }
-            //thread.Join();
-            //}
-            //ns.Close();
-            //client.Close();
-            //Console.WriteLine("disconnect from server!!");
-            //Console.ReadKey();
+                }               
+            }           
         }
 
         static void ReceiveData(TcpClient client)
         {
             Console.WriteLine("Enter ReceiveData");
 
-            NetworkStream ns = client.GetStream();
-            byte[] receivedBytes = new byte[1024];
-            int read = ns.Read(receivedBytes, 0, receivedBytes.Length);
-            int byte_count = receivedBytes[2];
-            Console.WriteLine("All byte "+byte_count);
+            NetworkStream ns = client.GetStream(); // Get the data that client pass to server
+            byte[] receivedBytes = new byte[1024]; // Create this to store data that client pass to server
+            int read = ns.Read(receivedBytes, 0, receivedBytes.Length); // Read the data that sent from server and store the data in receivedBytes
+            int byte_count = receivedBytes[2]; // this byte will tell that how many byte have sent
+            //Console.WriteLine("All byte "+byte_count);
 
             //verify
             if (read > 0)
@@ -136,10 +121,10 @@ namespace Client
                 {
                     if (receivedBytes[0] == 0x05 && receivedBytes[1] == 0x05)  //check header
                     {
-                        if (receivedBytes[byte_count - 2] == 0x00 && receivedBytes[byte_count - 1] == 0x01)
+                        if (receivedBytes[byte_count - 2] == 0x00 && receivedBytes[byte_count - 1] == 0x01) // check end
                         {
-                            string server = BitConverter.ToString(receivedBytes, 3, 1);
-                            Console.WriteLine(server);
+                            string server = BitConverter.ToString(receivedBytes, 3, 1); 
+                            Console.WriteLine(server); // Just to see that server send data back
                         }
                         else
                         {
